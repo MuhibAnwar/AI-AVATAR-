@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://avaai-backend.onrender.com/api/:path*"
+      "destination": "https://ai-avatar-7pbq.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
