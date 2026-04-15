@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: avaai-backend
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: DID_API_KEY
+        sync: false
+      - key: DID_PRESENTER_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
