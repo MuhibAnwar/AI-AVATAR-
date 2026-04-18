@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useUser, UserButton, SignInButton, SignUpButton } from '@clerk/clerk-react';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import LandingPage from './components/LandingPage.jsx';
 import CallScreen from './components/CallScreen.jsx';
 import CallHistoryPage from './components/CallHistoryPage.jsx';
@@ -103,6 +105,9 @@ export default function App() {
       {showGuestModal && !user && (
         <GuestPromptModal onDismiss={() => setShowGuestModal(false)} />
       )}
+
+      <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
