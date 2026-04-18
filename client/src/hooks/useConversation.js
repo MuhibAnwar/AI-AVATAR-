@@ -110,31 +110,55 @@ function speakWithBrowser(text) {
 
     const doSpeak = () => {
       synth.cancel();
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.rate = 1.05; utt.pitch = 1.1; utt.lang = 'en-US';
-      const voices = synth.getVoices();
-      const female = voices.find(v => /samantha|karen|zira|jenny|aria|victoria|moira/i.test(v.name));
-      if (female) utt.voice = female;
-      utt.onend = resolve; utt.onerror = resolve;
-      synth.speak(utt);
+      // Chrome bug: speak() called immediately after cancel() is silently dropped
+      setTimeout(() => {
+        const utt = new SpeechSynthesisUtterance(text);
+        utt.rate = 1.05; utt.pitch = 1.1; utt.lang = 'en-US';
+        const voices = synth.getVoices();
+        const female = voices.find(v => /samantha|karen|zira|jenny|aria|victoria|moira/i.test(v.name));
+        if (female) utt.voice = female;
+
+        // Chrome silently cuts off utterances > ~15s — keep synthesis alive
+        const keepAlive = setInterval(() => {
+          if (!synth.speaking) { clearInterval(keepAlive); return; }
+          synth.pause();
+          synth.resume();
+        }, 10_000);
+        utt.onend = () => { clearInterval(keepAlive); resolve(); };
+        utt.onerror = () => { clearInterval(keepAlive); resolve(); };
+
+        synth.speak(utt);
+      }, 50);
     };
 
     if (synth.getVoices().length > 0) {
       doSpeak();
     } else {
-      synth.addEventListener('voiceschanged', doSpeak, { once: true });
-      setTimeout(doSpeak, 500);
+      // Guard against both voiceschanged and setTimeout firing doSpeak
+      let called = false;
+      const once = () => { if (!called) { called = true; doSpeak(); } };
+      synth.addEventListener('voiceschanged', once, { once: true });
+      setTimeout(once, 500);
     }
   });
 }
 
-async function apiFetch(url, options = {}) {
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `HTTP ${res.status}`);
+async function apiFetch(url, options = {}, timeoutMs = 30000) {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(tid);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    clearTimeout(tid);
+    if (err.name === 'AbortError') throw new Error('Request timed out — Ava is waking up, please try again.');
+    throw err;
   }
-  return res.json();
 }
 
 

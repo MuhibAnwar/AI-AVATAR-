@@ -131,8 +131,8 @@ router.post('/', async (req, res, next) => {
     history.push({ role: 'assistant', content: aiText });
     sessionStore.set(sessionId, history);
 
-    saveMessage(sessionId, 'user', text.trim());
-    saveMessage(sessionId, 'assistant', aiText);
+    await saveMessage(sessionId, 'user', text.trim());
+    await saveMessage(sessionId, 'assistant', aiText);
 
     console.log(`[Chat] User: "${text}" → Ava: "${aiText.substring(0, 80)}..."`);
 

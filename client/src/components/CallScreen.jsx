@@ -445,17 +445,39 @@ function speakWithBrowser(text, onEnd) {
     const synth = window.speechSynthesis;
     if (!synth) { onEnd?.(); resolve(); return; }
     const done = () => { onEnd?.(); resolve(); };
+
     const doSpeak = () => {
       synth.cancel();
-      const utt = new SpeechSynthesisUtterance(text);
-      utt.rate = 1.05; utt.pitch = 1.1; utt.lang = 'en-US';
-      const voices = synth.getVoices();
-      const female = voices.find(v => /samantha|karen|zira|jenny|aria|victoria|moira/i.test(v.name));
-      if (female) utt.voice = female;
-      utt.onend = done; utt.onerror = done;
-      synth.speak(utt);
+      // Chrome bug: speak() called immediately after cancel() is silently dropped
+      setTimeout(() => {
+        const utt = new SpeechSynthesisUtterance(text);
+        utt.rate = 1.05; utt.pitch = 1.1; utt.lang = 'en-US';
+        const voices = synth.getVoices();
+        const female = voices.find(v => /samantha|karen|zira|jenny|aria|victoria|moira/i.test(v.name));
+        if (female) utt.voice = female;
+
+        // Chrome silently cuts off utterances > ~15s — keep synthesis alive
+        const keepAlive = setInterval(() => {
+          if (!synth.speaking) { clearInterval(keepAlive); return; }
+          synth.pause();
+          synth.resume();
+        }, 10_000);
+        utt.onend = () => { clearInterval(keepAlive); done(); };
+        utt.onerror = () => { clearInterval(keepAlive); done(); };
+
+        synth.speak(utt);
+      }, 50);
     };
-    synth.getVoices().length > 0 ? doSpeak() : (synth.addEventListener('voiceschanged', doSpeak, { once: true }), setTimeout(doSpeak, 500));
+
+    if (synth.getVoices().length > 0) {
+      doSpeak();
+    } else {
+      // Guard against both voiceschanged and setTimeout firing doSpeak
+      let called = false;
+      const once = () => { if (!called) { called = true; doSpeak(); } };
+      synth.addEventListener('voiceschanged', once, { once: true });
+      setTimeout(once, 500);
+    }
   });
 }
 
